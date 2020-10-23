@@ -6,29 +6,33 @@
 
 const char* ssid = "BecauseFi";
 const char* password = "wearetherealmvps";
-const int ledPin = 16;  // 16 corresponds to GPIO16
-const int redBtn = 33;
-const int blackBtn = 32;
 
-
+// outputs
+const int ledPin = 16; 
 const int warmLight = 4;
 const int coldLight = 5;
+const int warmPWM = 0;
+const int coldPWM = 1;
+const int freq = 1000; // 5000 Khz produced a hum at 50% duty cycle, so brought this down
+const int resolution = 12;
+
+// inputs
+const int redBtn = 33;
+const int blackBtn = 32;
 const int rightKnob = 39;
 const int leftKnob = 36;
 
+// variables
+bool btnState = false;
+bool oldBtn = false;
+int minBrightness = 40;
 int warmLevel;
 int coldLevel;
 float globalPower;
-
-int minBrightness = 40;
-
-const int freq = 5000;
-const int warmPWM = 0;
-const int coldPWM = 1;
-const int resolution = 12;
-
-int rightVal = 0;
-int leftVal = 0;
+int rightVal;
+int oldRight;
+int leftVal;
+int oldLeft;
 
 void setup() {  
   Serial.begin(115200);
@@ -72,6 +76,7 @@ void setup() {
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+
   ledcSetup(warmPWM, freq, resolution);
   ledcSetup(coldPWM, freq, resolution);
   ledcAttachPin(ledPin, warmPWM);
@@ -85,46 +90,51 @@ void setup() {
 void loop() {
   ArduinoOTA.handle();
 
-  if (digitalRead(blackBtn)){
-    leftVal = constrain(map(analogRead(leftKnob),0,3859,0,4095),0,4095);
-    rightVal = constrain(map(analogRead(rightKnob),0,3853,0,4095),0,4095);
+  btnState = digitalRead(blackBtn);
+  leftVal = constrain(map(analogRead(leftKnob),0,3859,0,4095),0,4095);
+  rightVal = constrain(map(analogRead(rightKnob),0,3853,0,4095),0,4095);
 
-    globalPower = leftVal;
-    warmLevel = rightVal;
-    coldLevel = 4095 - warmLevel;
+  if ((abs(leftVal - oldLeft) > 5) || (abs(rightVal - oldRight) > 5) || (btnState != oldBtn)){
+    if (btnState){
 
-    coldLevel = 4095 - warmLevel;
+      globalPower = leftVal;
+      warmLevel = rightVal;
+      coldLevel = 4095 - warmLevel;
 
-    if (warmLevel<20){
-      warmLevel = 0;
+
+      if (warmLevel<20){
+        warmLevel = 0;
+      }
+      else if (warmLevel>4080){
+        warmLevel = 4095;
+      }
+
+      if (coldLevel<20){
+        coldLevel = 0;
+      }
+      else if (coldLevel>4080){
+        coldLevel = 4095;
+      }
+
+      if (globalPower<minBrightness){
+        globalPower = minBrightness;
+      }
+      else if (globalPower>4080){
+        globalPower = 4095;
+      }
+      globalPower = globalPower/4095;
+
+      ledcWrite(warmPWM,warmLevel*globalPower);
+      ledcWrite(coldPWM,coldLevel*globalPower);
     }
-    else if (warmLevel>4080){
-      warmLevel = 4095;
+    else{
+      ledcWrite(warmPWM,0);
+      ledcWrite(coldPWM,0);
     }
-
-    if (coldLevel<20){
-      coldLevel = 0;
-    }
-    else if (coldLevel>4080){
-      coldLevel = 4095;
-    }
-
-    if (globalPower<minBrightness){
-      globalPower = minBrightness;
-    }
-    else if (globalPower>4080){
-      globalPower = 4095;
-    }
-
-    globalPower = globalPower/4095;
-
-    ledcWrite(warmPWM,warmLevel*globalPower);
-    ledcWrite(coldPWM,coldLevel*globalPower);
   }
-  else{
-    ledcWrite(warmPWM,0);
-    ledcWrite(coldPWM,0);
-  }
-  delay(20);
+
+  oldBtn = btnState;
+  oldLeft = leftVal;
+  oldRight = rightVal;
 }
 
