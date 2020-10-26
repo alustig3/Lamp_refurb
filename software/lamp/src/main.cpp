@@ -91,22 +91,8 @@ void setup() {
 
 void loop() {
   if (!digitalRead(red_btn_up)){
-      delay(600);
-      if (digitalRead(black_btn_down)){
-        maxPower = !maxPower;
-        if (maxPower){
-          ledcWrite(warmPWM,4095);
-          ledcWrite(coldPWM,4095);
-        }
-        else{
-          ledcWrite(warmPWM,1000);
-          ledcWrite(coldPWM,1000);
-        }
-        while(!digitalRead(red_btn_up)){
-        }
-        delay(150);
-      }
-      else{
+      delay(200);
+      if (!digitalRead(black_btn_down)){
         while(!digitalRead(red_btn_up)){
           ArduinoOTA.handle();
         }
@@ -117,14 +103,14 @@ void loop() {
   leftVal = constrain(map(analogRead(leftKnob),0,3859,0,4095),0,4095);
   rightVal = constrain(map(analogRead(rightKnob),0,3853,0,4095),0,4095);
 
-  if (btnState == 1){
+  if (btnState == 0){
     if (maxPower){
       ledcWrite(warmPWM,4095);
       ledcWrite(coldPWM,4095);
     }
     else{
-      globalPower = leftVal;
-      warmLevel = rightVal;
+      globalPower = rightVal;
+      warmLevel = leftVal;
       coldLevel = 4095 - warmLevel;
 
       if (warmLevel<filter){
@@ -141,8 +127,8 @@ void loop() {
         coldLevel = 4095;
       }
 
-      if (globalPower<minBrightness){
-        globalPower = minBrightness;
+      if (globalPower<filter){
+        globalPower = 0;
       }
       else if (globalPower>(4095-filter)){
         globalPower = 4095;
@@ -154,7 +140,7 @@ void loop() {
     }
   }
   else{
-    ledcWrite(warmPWM,0);
-    ledcWrite(coldPWM,0);
+    ledcWrite(warmPWM,4095);
+    ledcWrite(coldPWM,4095);
   }
 }
