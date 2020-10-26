@@ -13,12 +13,12 @@ const int warmLight = 4;
 const int coldLight = 5;
 const int warmPWM = 0;
 const int coldPWM = 1;
-const int freq = 1000; // 5000 Khz produced a hum at 50% duty cycle, so brought this down
+const int freq = 15000; // 5000 Khz produced a hum at 50% duty cycle, so brought this down
 const int resolution = 12;
 
 // inputs
-const int redBtn = 33;
-const int blackBtn = 32;
+const int red_btn_up = 33;
+const int black_btn_down = 32;
 const int rightKnob = 39;
 const int leftKnob = 36;
 
@@ -33,6 +33,8 @@ int rightVal;
 int oldRight;
 int leftVal;
 int oldLeft;
+bool maxPower = false;
+int filter = 100;
 
 void setup() {  
   Serial.begin(115200);
@@ -83,43 +85,66 @@ void setup() {
   ledcAttachPin(warmLight, warmPWM);
   ledcAttachPin(coldLight, coldPWM);
 
-  pinMode(redBtn,INPUT_PULLUP);
-  pinMode(blackBtn,INPUT_PULLUP);
+  pinMode(red_btn_up,INPUT_PULLUP);
+  pinMode(black_btn_down,INPUT_PULLUP);
 }
 
 void loop() {
-  ArduinoOTA.handle();
+  if (!digitalRead(red_btn_up)){
+      delay(600);
+      if (digitalRead(black_btn_down)){
+        maxPower = !maxPower;
+        if (maxPower){
+          ledcWrite(warmPWM,4095);
+          ledcWrite(coldPWM,4095);
+        }
+        else{
+          ledcWrite(warmPWM,1000);
+          ledcWrite(coldPWM,1000);
+        }
+        while(!digitalRead(red_btn_up)){
+        }
+        delay(150);
+      }
+      else{
+        while(!digitalRead(red_btn_up)){
+          ArduinoOTA.handle();
+        }
+      }
+  }
 
-  btnState = digitalRead(blackBtn);
+  btnState = digitalRead(black_btn_down);
   leftVal = constrain(map(analogRead(leftKnob),0,3859,0,4095),0,4095);
   rightVal = constrain(map(analogRead(rightKnob),0,3853,0,4095),0,4095);
 
-  if ((abs(leftVal - oldLeft) > 5) || (abs(rightVal - oldRight) > 5) || (btnState != oldBtn)){
-    if (btnState){
-
+  if (btnState == 1){
+    if (maxPower){
+      ledcWrite(warmPWM,4095);
+      ledcWrite(coldPWM,4095);
+    }
+    else{
       globalPower = leftVal;
       warmLevel = rightVal;
       coldLevel = 4095 - warmLevel;
 
-
-      if (warmLevel<20){
+      if (warmLevel<filter){
         warmLevel = 0;
       }
-      else if (warmLevel>4080){
+      else if (warmLevel>(4095-filter)){
         warmLevel = 4095;
       }
 
-      if (coldLevel<20){
+      if (coldLevel<filter){
         coldLevel = 0;
       }
-      else if (coldLevel>4080){
+      else if (coldLevel>(4095-filter)){
         coldLevel = 4095;
       }
 
       if (globalPower<minBrightness){
         globalPower = minBrightness;
       }
-      else if (globalPower>4080){
+      else if (globalPower>(4095-filter)){
         globalPower = 4095;
       }
       globalPower = globalPower/4095;
@@ -127,14 +152,9 @@ void loop() {
       ledcWrite(warmPWM,warmLevel*globalPower);
       ledcWrite(coldPWM,coldLevel*globalPower);
     }
-    else{
-      ledcWrite(warmPWM,0);
-      ledcWrite(coldPWM,0);
-    }
   }
-
-  oldBtn = btnState;
-  oldLeft = leftVal;
-  oldRight = rightVal;
+  else{
+    ledcWrite(warmPWM,0);
+    ledcWrite(coldPWM,0);
+  }
 }
-
