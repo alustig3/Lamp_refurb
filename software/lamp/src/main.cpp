@@ -30,10 +30,7 @@ int warmLevel;
 int coldLevel;
 float globalPower;
 int rightVal;
-int oldRight;
 int leftVal;
-int oldLeft;
-bool maxPower = false;
 int filter = 100;
 
 void setup() {  
@@ -99,48 +96,41 @@ void loop() {
       }
   }
 
-  btnState = digitalRead(black_btn_down);
   leftVal = constrain(map(analogRead(leftKnob),0,3859,0,4095),0,4095);
   rightVal = constrain(map(analogRead(rightKnob),0,3853,0,4095),0,4095);
 
-  if (btnState == 0){
-    if (maxPower){
-      ledcWrite(warmPWM,4095);
-      ledcWrite(coldPWM,4095);
-    }
-    else{
-      globalPower = rightVal;
-      warmLevel = leftVal;
-      coldLevel = 4095 - warmLevel;
-
-      if (warmLevel<filter){
-        warmLevel = 0;
-      }
-      else if (warmLevel>(4095-filter)){
-        warmLevel = 4095;
-      }
-
-      if (coldLevel<filter){
-        coldLevel = 0;
-      }
-      else if (coldLevel>(4095-filter)){
-        coldLevel = 4095;
-      }
-
-      if (globalPower<filter){
-        globalPower = 0;
-      }
-      else if (globalPower>(4095-filter)){
-        globalPower = 4095;
-      }
-      globalPower = globalPower/4095;
-
-      ledcWrite(warmPWM,warmLevel*globalPower);
-      ledcWrite(coldPWM,coldLevel*globalPower);
-    }
-  }
-  else{
+  if (digitalRead(black_btn_down) == true){
     ledcWrite(warmPWM,4095);
     ledcWrite(coldPWM,4095);
+  }
+  else{
+    globalPower = rightVal;
+    warmLevel = leftVal;
+    coldLevel = 4095 - warmLevel;
+
+    if (warmLevel<filter){
+      warmLevel = 0;
+    }
+    else if (warmLevel>(4095-filter)){
+      warmLevel = 4095;
+    }
+
+    if (coldLevel<filter){
+      coldLevel = 0;
+    }
+    else if (coldLevel>(4095-filter)){
+      coldLevel = 4095;
+    }
+
+    if (globalPower<filter){
+      globalPower = 0;
+    }
+    else if (globalPower>(4095-filter)){
+      globalPower = 4095;
+    }
+    globalPower = globalPower/4095;
+
+    ledcWrite(warmPWM,warmLevel*globalPower);
+    ledcWrite(coldPWM,coldLevel*globalPower);
   }
 }
