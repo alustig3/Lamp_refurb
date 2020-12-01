@@ -37,61 +37,11 @@ float globalPower;
 int rightVal;
 int leftVal;
 int filter = 100;
-
-
-// void handleNewMessages(int numNewMessages)
-// {
-//   Serial.print("handleNewMessages ");
-//   Serial.println(numNewMessages);
-
-//   for (int i = 0; i < numNewMessages; i++)
-//   {
-//     String chat_id = bot.messages[i].chat_id;
-//     String text = bot.messages[i].text;
-
-//     String from_name = bot.messages[i].from_name;
-//     if (from_name == "")
-//       from_name = "Guest";
-
-//     if (text == "/ledon")
-//     {
-//       // digitalWrite(ledPin, LOW); // turn the LED on (HIGH is the voltage level)
-//       // ledStatus = 1;
-//       bot.sendMessage(chat_id, "Led is ON", "");
-//     }
-
-//     if (text == "/ledoff")
-//     {
-//       // ledStatus = 0;
-//       // digitalWrite(ledPin, HIGH); // turn the LED off (LOW is the voltage level)
-//       bot.sendMessage(chat_id, "Led is OFF", "");
-//     }
-
-//     if (text == "/status")
-//     {
-//       // if (ledStatus)
-//       bot.sendMessage(chat_id, String(chat_id), "");
-//       if (1)
-//       {
-//         bot.sendMessage(chat_id, "Led is ON", "");
-//       }
-//       else
-//       {
-//         bot.sendMessage(chat_id, "Led is OFF", "");
-//       }
-//     }
-
-//     if (text == "/start")
-//     {
-//       String welcome = "Welcome to Universal Arduino Telegram Bot library, " + from_name + ".\n";
-//       welcome += "This is Flash Led Bot example.\n\n";
-//       welcome += "/ledon : to switch the Led ON\n";
-//       welcome += "/ledoff : to switch the Led OFF\n";
-//       welcome += "/status : Returns current status of LED\n";
-//       bot.sendMessage(chat_id, welcome, "Markdown");
-//     }
-//   }
-// }
+unsigned long turned_on;
+int on_count = 0;
+int off_count = 0;
+int repeat_thresh = 1000;
+String on_string;
 
 void setup() {  
   Serial.begin(115200);
@@ -150,20 +100,6 @@ void setup() {
 }
 
 void loop() {
-  // if (millis() - bot_lasttime > BOT_MTBS)
-  // {
-  //   int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
-
-  //   while (numNewMessages)
-  //   {
-  //     Serial.println("got response");
-  //     handleNewMessages(numNewMessages);
-  //     numNewMessages = bot.getUpdates(bot.last_message_received + 1);
-  //   }
-
-  //   bot_lasttime = millis();
-  // }
-
   if (!digitalRead(red_btn_up)){
       delay(200);
       if (!digitalRead(black_btn_down)){
@@ -179,6 +115,14 @@ void loop() {
   if (digitalRead(black_btn_down) == true){
     ledcWrite(warmPWM,4095);
     ledcWrite(coldPWM,4095);
+    off_count = 0;
+    if (on_count<repeat_thresh){
+      on_count++;
+    }
+    else if (on_count==repeat_thresh){
+      turned_on = millis();
+      on_count++;
+    }
   }
   else{
     globalPower = rightVal;
@@ -206,8 +150,43 @@ void loop() {
       globalPower = 4095;
     }
     globalPower = globalPower/4095;
-
+    
     ledcWrite(warmPWM,warmLevel*globalPower);
     ledcWrite(coldPWM,coldLevel*globalPower);
+
+    if(globalPower){
+      off_count = 0;
+      if (on_count<repeat_thresh){
+        on_count++;
+      }
+      else if (on_count==repeat_thresh){
+        turned_on = millis();
+        on_count++;
+      }
+    }
+    else{
+      on_count = 0;
+      if (off_count<repeat_thresh){
+        off_count++;
+      }
+      else if (off_count==repeat_thresh){
+        unsigned long all_seconds = (millis()-turned_on)/1000;
+        int hours = all_seconds/3600;
+        int secs_for_minutes = all_seconds%3600;
+        int minutes = secs_for_minutes/60;
+        int seconds = secs_for_minutes%60;
+        if(hours){
+          on_string = "I gifted you with light for: " + String(hours) + "h " + String(minutes) + "m " + String(seconds) + "s";
+        }
+        else if (minutes){
+          on_string = "I gifted you with light for: " + String(minutes) + "m " + String(seconds) + "s";
+        }
+        else{
+          on_string = "I gifted you with light for: " + String(seconds) + "s";
+        }
+        bot.sendMessage(lamp_chat_id,on_string, "");
+        off_count++;
+      }
+    }
   }
 }
