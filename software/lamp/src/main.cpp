@@ -43,6 +43,8 @@ int off_count = 0;
 int repeat_thresh = 1000;
 String on_string;
 
+void blink(int count);
+
 void setup() {  
   Serial.begin(115200);
   Serial.println("Booting");
@@ -184,9 +186,25 @@ void loop() {
         else{
           on_string = "I gifted you with light for: " + String(seconds) + "s";
         }
-        bot.sendMessage(lamp_chat_id,on_string, "");
+        if(bot.sendMessage(lamp_chat_id,on_string, "")){
+          blink(2);
+        }
+        else{
+          blink(6);
+        }
         off_count++;
       }
     }
+  }
+}
+
+void blink(int count){
+  for (int i = 0; i < count; i++){
+    ledcWrite(warmPWM,100);
+    ledcWrite(coldPWM,100);
+    delay(100);
+    ledcWrite(warmPWM,0);
+    ledcWrite(coldPWM,0);
+    delay(100);
   }
 }
