@@ -6,6 +6,8 @@
 #include <WiFiClientSecure.h>
 #include <UniversalTelegramBot.h>
 #include <secrets.h>
+#include <ArduinoJson.h>
+
 const unsigned long BOT_MTBS = 1000; // mean time between scan messages
 
 WiFiClientSecure secured_client;
@@ -44,6 +46,7 @@ int repeat_thresh = 1000;
 String on_string;
 
 void blink(int count);
+void reconnect();
 
 void setup() {  
   Serial.begin(115200);
@@ -190,7 +193,11 @@ void loop() {
           blink(2);
         }
         else{
-          blink(6);
+          blink(8);
+          delay(5000);
+          reconnect();
+          on_string += " wifi reconnected";
+          bot.sendMessage(lamp_chat_id,on_string, "");
         }
         off_count++;
       }
@@ -202,9 +209,34 @@ void blink(int count){
   for (int i = 0; i < count; i++){
     ledcWrite(warmPWM,100);
     ledcWrite(coldPWM,100);
-    delay(100);
+    delay(200);
     ledcWrite(warmPWM,0);
     ledcWrite(coldPWM,0);
-    delay(100);
+    delay(200);
+  }
+}
+
+
+void reconnect(){ //https://github.com/espressif/arduino-esp32/issues/653#issuecomment-572392965
+  if ( WiFi.status() ==  WL_CONNECTED ) 
+  {
+    blink(2);
+    // WiFi is UP,  do what ever
+  }
+  else {
+    blink(5);
+    // wifi down, reconnect here
+    WiFi.begin();
+    int WLcount = 0;
+    int UpCount = 0;
+    while (WiFi.status() != WL_CONNECTED && WLcount < 200 ) {
+      delay( 100 );
+      Serial.printf(".");
+      if (UpCount >= 60){  // just keep terminal from scrolling sideways
+        UpCount = 0;
+      }
+      ++UpCount;
+      ++WLcount;
+    }
   }
 }
