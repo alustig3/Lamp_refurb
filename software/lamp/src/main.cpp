@@ -189,14 +189,10 @@ void loop() {
         else{
           on_string = "I gifted you with light for: " + String(seconds) + "s";
         }
-        if(bot.sendMessage(lamp_chat_id,on_string, "")){
+        if(bot.sendMessage(lamp_chat_id,on_string, "") == false){
           blink(2);
-        }
-        else{
-          blink(8);
-          delay(5000);
           reconnect();
-          on_string += " wifi reconnected";
+          bot.sendMessage(lamp_chat_id,"Wifi reconnected", "");
           bot.sendMessage(lamp_chat_id,on_string, "");
         }
         off_count++;
@@ -218,25 +214,11 @@ void blink(int count){
 
 
 void reconnect(){ //https://github.com/espressif/arduino-esp32/issues/653#issuecomment-572392965
-  if ( WiFi.status() ==  WL_CONNECTED ) 
-  {
-    blink(2);
-    // WiFi is UP,  do what ever
-  }
-  else {
-    blink(5);
-    // wifi down, reconnect here
-    WiFi.begin();
-    int WLcount = 0;
-    int UpCount = 0;
-    while (WiFi.status() != WL_CONNECTED && WLcount < 200 ) {
-      delay( 100 );
-      Serial.printf(".");
-      if (UpCount >= 60){  // just keep terminal from scrolling sideways
-        UpCount = 0;
-      }
-      ++UpCount;
-      ++WLcount;
-    }
+  // wifi down, reconnect here
+  WiFi.begin();
+  int WLcount = 0;
+  while (WiFi.status() != WL_CONNECTED && WLcount < 200 ) {
+    delay(100);
+    ++WLcount;
   }
 }
