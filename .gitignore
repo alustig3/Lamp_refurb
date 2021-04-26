@@ -1,3 +1,6 @@
 pcb/lamp_refurb-backups
 pcb/lamp_refurb.kicad_prl
 software/lamp/lamp_workspace.code-workspace
+pcb/sym-lib-table
+pcb/fp-lib-table
+pcb/fp-info-cache
